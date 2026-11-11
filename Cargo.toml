@@ -1,0 +1,20 @@
+[package]
+name = "qr"
+version = "0.1.0"
+edition = "2021"
+description = "QR codes written from scratch (ISO/IEC 18004), with no dependencies: encode, and decode from a camera frame"
+license = "MIT"
+repository = "https://github.com/journey-to-code-org/qr"
+# The crate name is a placeholder until one is chosen and checked against crates.io.
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["decode"]
+# Reading a symbol out of a camera frame. Encoding is always available; leave this off for a
+# build that only draws codes.
+decode = []
+
+[dependencies]
