@@ -33,6 +33,21 @@ let bytes = decode(&Frame { width, height, luma })?;  // luma: one byte per pixe
 
 `qr::wire` has the same two operations as flat byte buffers, for a WebAssembly or C caller: `matrix(data)` returns a `KQRM` header and one byte per module, and `read_frame(bytes)` takes `width`, `height` and the luma.
 
+### From JavaScript (a server or a browser)
+
+`js/qr.js` loads the WebAssembly build (`cargo build --release --target wasm32-unknown-unknown`, then `target/wasm32-unknown-unknown/release/qr.wasm`), the same on Node and in a browser:
+
+```js
+import { loadQr } from './qr.js';
+
+const qr = await loadQr(await fetch('/qr.wasm'));        // or the bytes, a WebAssembly.Module, or a URL
+const code = qr.encode('https://potomac.solutions/t/8F3K'); // { size, modules }
+const markup = qr.svg(code, { title: 'Your ticket' });     // one <path>, a 4-module quiet zone
+const text = qr.decodeText({ width, height, luma });        // from a camera frame
+```
+
+Errors are `QrError`, with `code` one of `empty`, `too-long`, `not-found`, `unsupported`, `uncorrectable`, `malformed`, `bad-frame`, `frame-too-large`. Underneath is `src/exports.rs`, a small C ABI (`qr_alloc`, `qr_encode`, `qr_decode`, `qr_result_ptr`/`qr_result_len`, `qr_free`) any WebAssembly host can call.
+
 ## Features
 
 | Feature | Default | What it adds |
@@ -45,14 +60,17 @@ let bytes = decode(&Frame { width, height, luma })?;  // luma: one byte per pixe
 cargo test                          # round trips, every version and mask, perspective, damage, fuzzing
 cargo test --no-default-features    # the encoder alone
 cargo test --release -- --ignored   # the long fuzz run
+cd js && npm test                   # the WebAssembly build in Node and in Chrome (needs the release .wasm)
 ```
 
-CI runs formatting, clippy, both test configurations and both WebAssembly builds.
+`js/test/fixtures.txt` holds 24 codes drawn by the native encoder, every version 1 to 10. The JavaScript tests require the WebAssembly build to draw them exactly, in Node and in Chrome, and read back an SVG painted on a canvas. `cargo test` fails if the native encoder ever draws differently; `UPDATE_FIXTURES=1 cargo test` rewrites the file.
+
+CI runs formatting, clippy, both test configurations, both WebAssembly builds, and the JavaScript tests between them; it keeps `qr.wasm` as an artifact.
 
 ## Not here yet
 
-- WebAssembly exports and a small JavaScript loader. Kin's are tied to its own ABI.
-- An SVG renderer, and a `qr-code` custom element for Zubra UI.
+- A `qr-code` custom element for Zubra UI.
+- A package on npm for the loader and the build.
 - Other modes, levels and versions above 10.
 
 ## Licence
