@@ -20,5 +20,20 @@ jobs:
       - run: cargo test
       - run: cargo test --no-default-features
       - run: cargo build --release --target wasm32-unknown-unknown
+      # The JavaScript loader against this build, in Node and in Chrome (on the runner), checked
+      # against the native encoder's fixtures. Before the encoder-only build, which overwrites it.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: js
+      - run: npm test
+        working-directory: js
+        env:
+          CHROME: /usr/bin/google-chrome
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qr-wasm
+          path: target/wasm32-unknown-unknown/release/qr.wasm
       - run: cargo build --release --target wasm32-unknown-unknown --no-default-features
       - run: ls -l target/wasm32-unknown-unknown/release/*.wasm

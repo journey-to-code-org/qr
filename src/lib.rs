@@ -6,7 +6,7 @@
 //! holds 213 bytes. That covers a link or a signed ticket with room to spare.
 //!
 //! [`wire`] holds the byte layouts for callers on the other side of a
-//! WebAssembly or C boundary.
+//! WebAssembly or C boundary, and [`exports`] the functions they call.
 
 // Without the decoder, the tables and layout helpers only it uses are unused.
 #![cfg_attr(not(feature = "decode"), allow(dead_code))]
@@ -14,6 +14,7 @@
 #[cfg(feature = "decode")]
 pub mod decode;
 pub mod encode;
+pub mod exports;
 pub mod layout;
 pub mod rs;
 pub mod tables;
