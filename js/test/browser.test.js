@@ -15,6 +15,7 @@ const wasm = readFileSync(wasmPath);
 let browser, server, base;
 
 before(async () => {
+  if (!chrome) return;
   server = createServer((req, res) => {
     if (req.url === '/qr.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(loader);
     if (req.url === '/qr.wasm') return res.writeHead(200, { 'content-type': 'application/wasm' }).end(wasm);
@@ -66,4 +67,36 @@ test('an SVG made on the server, painted in the browser, reads back', { skip: !c
     return qr.decodeText({ width: 360, height: 360, luma });
   }, markup);
   assert.equal(read, text);
+});
+
+test('linear barcodes encode, scan, and render in the browser', { skip: !chrome && 'no Chrome' }, async () => {
+  const page = await browser.newPage();
+  await page.goto(base);
+  const result = await page.evaluate(async () => {
+    const { loadQr } = await import('/qr.js');
+    const qr = await loadQr(await fetch('/qr.wasm'));
+    const code = qr.encodeEan13('400638133393');
+    const scale = 3;
+    const width = code.width * scale;
+    const height = 68;
+    const luma = new Uint8Array(width * height).fill(255);
+    for (let x = 0; x < code.width; x++) {
+      if (code.modules[x]) {
+        for (let y = 0; y < height; y++) luma.fill(0, y * width + x * scale, y * width + (x + 1) * scale);
+      }
+    }
+    return {
+      type: code.type,
+      width: code.width,
+      decoded: qr.decodeBarcodeScanline(luma.subarray(34 * width, 35 * width)),
+      scanned: qr.scanFrame({ width, height, luma }),
+      svg: qr.barcodeSvg(code, { title: 'EAN-13' }),
+    };
+  });
+  assert.equal(result.type, 'ean13');
+  assert.equal(result.width, 117);
+  assert.deepEqual(result.decoded, { type: 'ean13', data: '4006381333931' });
+  assert.deepEqual(result.scanned, { type: 'ean13', data: '4006381333931' });
+  assert.match(result.svg, /aria-label="EAN-13"/);
+  assert.match(result.svg, /viewBox="0 0 117 60"/);
 });

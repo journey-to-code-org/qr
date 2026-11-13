@@ -44,9 +44,18 @@ const qr = await loadQr(await fetch('/qr.wasm'));        // or the bytes, a WebA
 const code = qr.encode('https://potomac.solutions/t/8F3K'); // { size, modules }
 const markup = qr.svg(code, { title: 'Your ticket' });     // one <path>, a 4-module quiet zone
 const text = qr.decodeText({ width, height, luma });        // from a camera frame
+
+const bars = qr.encodeCode128('Ticket-42');                 // { type, width, modules }
+const barsSvg = qr.barcodeSvg(bars, { title: 'Ticket' });
+const decoded = qr.decodeBarcodeScanline(lumaRow);          // { type, data }
+const detected = qr.scanFrame({ width, height, luma });     // QR or linear code
 ```
 
-Errors are `QrError`, with `code` one of `empty`, `too-long`, `not-found`, `unsupported`, `uncorrectable`, `malformed`, `bad-frame`, `frame-too-large`. Underneath is `src/exports.rs`, a small C ABI (`qr_alloc`, `qr_encode`, `qr_decode`, `qr_result_ptr`/`qr_result_len`, `qr_free`) any WebAssembly host can call.
+Errors are `QrError`, with `code` one of `empty`, `too-long`, `not-found`, `unsupported`, `uncorrectable`, `malformed`, `bad-frame`, `frame-too-large`. Underneath is `src/exports.rs`, a small C ABI (`qr_alloc`, `qr_encode`, `qr_decode`, `qr_barcode_encode`, `qr_barcode_scanline`, `qr_scan`, `qr_result_ptr`/`qr_result_len`, `qr_free`) any WebAssembly host can call.
+Linear-code input errors are `BarcodeError` values: `empty`, `invalid-input`,
+`invalid-length`, `invalid-checksum`, `bad-scanline`, or `not-found`. Barcode
+encoding and decoding are implemented by the Rust crate and exposed to
+JavaScript through its WebAssembly exports.
 
 ### Linear barcodes (Rust)
 
