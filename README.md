@@ -1,8 +1,7 @@
-# qr
+# symbology
 
-QR codes and linear barcodes written from scratch, in Rust, with no dependencies. It encodes QR bytes and Code 128, Code 39, and EAN-13 symbols, and decodes QR camera frames or linear barcode scanlines.
-
-The name is a placeholder.
+Dependency-free Rust encoders and decoders for QR codes and linear barcodes:
+Code 128, Code 39, and EAN-13.
 
 ## Where it came from
 
@@ -23,7 +22,7 @@ Known limit: a version 1 symbol (14 bytes or fewer) is not read from a frame tak
 ## Use
 
 ```rust
-use qr::{encode, decode, Frame};
+use symbology::{decode, encode, Frame};
 
 let code = encode(b"https://example.org/t/8F3K")?;   // Code { size, dark }
 for row in code.modules().chunks(code.size) { /* 1 is dark, 0 is light; add a quiet zone of 4 */ }
@@ -31,16 +30,16 @@ for row in code.modules().chunks(code.size) { /* 1 is dark, 0 is light; add a qu
 let bytes = decode(&Frame { width, height, luma })?;  // luma: one byte per pixel, row-major
 ```
 
-`qr::wire` has the same two operations as flat byte buffers, for a WebAssembly or C caller: `matrix(data)` returns a `KQRM` header and one byte per module, and `read_frame(bytes)` takes `width`, `height` and the luma.
+`symbology::wire` has the same two operations as flat byte buffers, for a WebAssembly or C caller: `matrix(data)` returns a `KQRM` header and one byte per module, and `read_frame(bytes)` takes `width`, `height` and the luma.
 
 ### From JavaScript (a server or a browser)
 
-`js/qr.js` loads the WebAssembly build (`cargo build --release --target wasm32-unknown-unknown`, then `target/wasm32-unknown-unknown/release/qr.wasm`), the same on Node and in a browser:
+`js/qr.js` loads the WebAssembly build (`cargo build --release --target wasm32-unknown-unknown`, then `target/wasm32-unknown-unknown/release/symbology.wasm`), the same on Node and in a browser:
 
 ```js
 import { loadQr } from './qr.js';
 
-const qr = await loadQr(await fetch('/qr.wasm'));        // or the bytes, a WebAssembly.Module, or a URL
+const qr = await loadQr(await fetch('/symbology.wasm'));  // or the bytes, a WebAssembly.Module, or a URL
 const code = qr.encode('https://potomac.solutions/t/8F3K'); // { size, modules }
 const markup = qr.svg(code, { title: 'Your ticket' });     // one <path>, a 4-module quiet zone
 const text = qr.decodeText({ width, height, luma });        // from a camera frame
@@ -60,7 +59,7 @@ JavaScript through its WebAssembly exports.
 ### Linear barcodes (Rust)
 
 ```rust
-use qr::barcode::{decode_scanline, encode_code128, encode_code39, encode_ean13};
+use symbology::barcode::{decode_scanline, encode_code128, encode_code39, encode_ean13};
 
 let code128 = encode_code128(b"Ticket-42")?; // printable ASCII, Code Set B
 let code39 = encode_code39(b"TICKET-42")?;   // Code 39's uppercase alphabet
@@ -85,7 +84,7 @@ or EAN-13. It returns the first readable result; it does not enumerate every
 symbol in a frame.
 
 ```rust
-use qr::{scan_frame, DetectedCode, Frame};
+use symbology::{scan_frame, DetectedCode, Frame};
 
 let result = scan_frame(&Frame { width, height, luma })?;
 match result {
@@ -111,7 +110,27 @@ cd js && npm test                   # the WebAssembly build in Node and in Chrom
 
 `js/test/fixtures.txt` holds 24 codes drawn by the native encoder, every version 1 to 10. The JavaScript tests require the WebAssembly build to draw them exactly, in Node and in Chrome, and read back an SVG painted on a canvas. `cargo test` fails if the native encoder ever draws differently; `UPDATE_FIXTURES=1 cargo test` rewrites the file.
 
-CI runs formatting, clippy, both test configurations, both WebAssembly builds, and the JavaScript tests between them; it keeps `qr.wasm` as an artifact.
+CI runs formatting, clippy, both test configurations, both WebAssembly builds, and the JavaScript tests between them; it keeps `symbology.wasm` as an artifact.
+
+## Try the browser demo
+
+The static demo in [`site/`](./site/) generates QR and linear codes, exports SVG,
+and scans uploaded images or camera frames entirely in the browser. The image
+data stays on your device.
+
+To preview it locally, build the WebAssembly module, copy it into the ignored
+site asset path, then serve the repository root over HTTP:
+
+```sh
+cargo build --release --target wasm32-unknown-unknown
+mkdir -p site/assets
+cp target/wasm32-unknown-unknown/release/symbology.wasm site/assets/
+cp js/qr.js site/assets/
+python -m http.server 8000
+```
+
+Open `http://localhost:8000/site/`. GitHub Pages deployment is handled by
+`.github/workflows/pages.yml` on pushes to `main`.
 
 ## Not here yet
 

@@ -12,13 +12,18 @@ import { wasmPath, fixtures } from './load.js';
 const chrome = [process.env.CHROME, '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].find((path) => path && existsSync(path));
 const loader = readFileSync(fileURLToPath(new URL('../qr.js', import.meta.url)));
 const wasm = readFileSync(wasmPath);
+const siteFile = (name) => readFileSync(fileURLToPath(new URL(`../../site/${name}`, import.meta.url)));
 let browser, server, base;
 
 before(async () => {
   if (!chrome) return;
   server = createServer((req, res) => {
-    if (req.url === '/qr.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(loader);
-    if (req.url === '/qr.wasm') return res.writeHead(200, { 'content-type': 'application/wasm' }).end(wasm);
+    const path = req.url.replace(/^\/symbology(?:\/|$)/, '/');
+    if (path === '/') return res.writeHead(200, { 'content-type': 'text/html' }).end(siteFile('index.html'));
+    if (path === '/app.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(siteFile('app.js'));
+    if (path === '/styles.css') return res.writeHead(200, { 'content-type': 'text/css' }).end(siteFile('styles.css'));
+    if (path === '/assets/qr.js' || path === '/qr.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(loader);
+    if (path === '/assets/symbology.wasm' || path === '/symbology.wasm') return res.writeHead(200, { 'content-type': 'application/wasm' }).end(wasm);
     res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>qr</title>');
   });
   await new Promise((done) => server.listen(0, done));
@@ -35,7 +40,7 @@ test('the browser draws exactly what the server draws', { skip: !chrome && 'no C
   await page.goto(base);
   const inBrowser = await page.evaluate(async (hexes) => {
     const { loadQr } = await import('/qr.js');
-    const qr = await loadQr(await fetch('/qr.wasm'));
+    const qr = await loadQr(await fetch('/symbology.wasm'));
     const bytes = (hex) => Uint8Array.from(hex.match(/../g) ?? [], (pair) => parseInt(pair, 16));
     return hexes.map((hex) => Array.from(qr.encode(bytes(hex)).modules).join(''));
   }, fixtures.map(({ bytes }) => Buffer.from(bytes).toString('hex')));
@@ -54,7 +59,7 @@ test('an SVG made on the server, painted in the browser, reads back', { skip: !c
   await page.goto(base);
   const read = await page.evaluate(async (markup) => {
     const { loadQr } = await import('/qr.js');
-    const qr = await loadQr(await fetch('/qr.wasm'));
+    const qr = await loadQr(await fetch('/symbology.wasm'));
     const image = new Image();
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
     await image.decode();
@@ -74,7 +79,7 @@ test('linear barcodes encode, scan, and render in the browser', { skip: !chrome 
   await page.goto(base);
   const result = await page.evaluate(async () => {
     const { loadQr } = await import('/qr.js');
-    const qr = await loadQr(await fetch('/qr.wasm'));
+    const qr = await loadQr(await fetch('/symbology.wasm'));
     const code = qr.encodeEan13('400638133393');
     const scale = 3;
     const width = code.width * scale;
@@ -99,4 +104,29 @@ test('linear barcodes encode, scan, and render in the browser', { skip: !chrome 
   assert.deepEqual(result.scanned, { type: 'ean13', data: '4006381333931' });
   assert.match(result.svg, /aria-label="EAN-13"/);
   assert.match(result.svg, /viewBox="0 0 117 60"/);
+});
+
+test('static demo generates codes and scans an uploaded image', { skip: !chrome && 'no Chrome' }, async () => {
+  const page = await browser.newPage();
+  await page.goto(`${base}/symbology/`);
+  await page.waitForSelector('#preview svg');
+  await page.locator('#format').selectOption('ean13');
+  await page.locator('#payload').fill('400638133393');
+  await page.locator('#generate').click();
+  await page.waitForFunction(() => document.querySelector('#preview-type')?.textContent === 'EAN13');
+  assert.match(await page.locator('#preview').innerHTML(), /<svg/);
+
+  await page.locator('#format').selectOption('qr');
+  await page.locator('#payload').fill('symbology demo scan');
+  await page.locator('#generate').click();
+  const svgMarkup = await page.locator('#preview').innerHTML();
+  const imageSvg = svgMarkup.replace('<svg ', '<svg width="420" height="420" ');
+  await page.locator('#image-file').setInputFiles({
+    name: 'demo.svg',
+    mimeType: 'image/svg+xml',
+    buffer: Buffer.from(imageSvg),
+  });
+  await page.waitForFunction(() => !document.querySelector('#scan-result')?.hidden);
+  assert.equal(await page.locator('#result-type').textContent(), 'QR');
+  assert.equal(await page.locator('#result-data').textContent(), 'symbology demo scan');
 });

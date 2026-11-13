@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f4ee">
+    <meta name="description" content="Generate and scan QR codes and linear barcodes in your browser, powered by dependency-free Rust and WebAssembly.">
+    <title>Symbology — Make a mark. Read a mark.</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="#top" aria-label="Symbology home">
+        <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>symbology<span class="wordmark-dot">.</span></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#make">Make</a>
+        <a href="#scan">Scan</a>
+        <a class="source-link" href="https://github.com/journey-to-code-org/symbology">Source <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="live-dot"></span> OPEN SOURCE · RUNS IN YOUR BROWSER</p>
+          <h1>Make a mark.<br><span>Read a mark.</span></h1>
+          <p class="hero-text">Create a QR code or barcode. Point your camera at one—or drop in an image—and read what’s inside. No uploads, no accounts, no fuss.</p>
+          <div class="hero-actions">
+            <a class="button button-dark" href="#make">Make a code <span aria-hidden="true">↓</span></a>
+            <a class="text-link" href="#scan">Try the scanner <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="hero-proof"><span>QR</span><span>CODE 128</span><span>CODE 39</span><span>EAN-13</span><span>100% local</span></div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="art-card art-qr"><span class="art-caption">01 / MATRIX</span><div class="qr-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="art-card art-bar"><span class="art-caption">02 / LINEAR</span><div class="bar-art"></div><span class="bar-label">A little signal, anywhere.</span></div>
+          <span class="art-star">✳</span>
+          <span class="art-note">NO CLOUD<br>REQUIRED</span>
+        </div>
+      </section>
+
+      <section class="feature-strip" aria-label="Project features">
+        <div><span class="feature-number">01</span><strong>Rust, from scratch</strong><span>Small. Fast. No dependencies.</span></div>
+        <div><span class="feature-number">02</span><strong>Made for real use</strong><span>Generate, scan, and move on.</span></div>
+        <div><span class="feature-number">03</span><strong>Private by design</strong><span>Your images stay on your device.</span></div>
+      </section>
+
+      <section id="make" class="tool-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">01 — GENERATOR</p><h2>Make something scannable.</h2></div>
+          <p>Pick a format, enter your data, and save a crisp SVG. It all happens right here.</p>
+        </div>
+        <div class="tool-card generator">
+          <div class="tool-controls">
+            <label class="field-label" for="format">FORMAT</label>
+            <select id="format">
+              <option value="qr">QR code</option>
+              <option value="code128">Code 128</option>
+              <option value="code39">Code 39</option>
+              <option value="ean13">EAN-13</option>
+            </select>
+            <label class="field-label input-label" for="payload">YOUR CONTENT</label>
+            <textarea id="payload" rows="3" maxlength="213" spellcheck="false">https://example.com/my-event</textarea>
+            <p id="format-hint" class="field-hint">QR supports up to 213 bytes. Text is encoded as UTF-8.</p>
+            <p id="generate-error" class="error-message" role="alert" hidden></p>
+            <button id="generate" class="button button-green" type="button">Generate code <span aria-hidden="true">↗</span></button>
+          </div>
+          <div class="preview-panel">
+            <div class="preview-top"><span>LIVE PREVIEW</span><span id="preview-type">QR CODE</span></div>
+            <div id="preview" class="preview" aria-live="polite"><p class="loading">Loading the tiny Rust engine…</p></div>
+            <div class="preview-bottom"><span id="preview-size">Ready when you are</span><button id="download" class="download-button" type="button" disabled>Download SVG <span aria-hidden="true">↓</span></button></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scan" class="tool-section scan-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">02 — SCANNER</p><h2>What’s behind the pattern?</h2></div>
+          <p>Scan a QR code or linear barcode from an image, or use your camera. Your image never leaves this page.</p>
+        </div>
+        <div class="tool-card scanner">
+          <div class="scan-actions">
+            <label class="upload-button" for="image-file"><span aria-hidden="true">↑</span> Choose an image</label>
+            <input id="image-file" class="visually-hidden" type="file" accept="image/*">
+            <button id="camera-start" class="button button-outline" type="button">Use camera <span aria-hidden="true">◎</span></button>
+            <button id="scan-now" class="button button-green" type="button" hidden>Scan now <span aria-hidden="true">⌕</span></button>
+            <button id="camera-stop" class="button button-outline" type="button" hidden>Stop camera <span aria-hidden="true">×</span></button>
+            <p class="field-hint">PNG, JPEG, or a clear camera view. One code per scan.</p>
+          </div>
+          <div class="scan-preview">
+            <video id="camera" playsinline muted hidden></video>
+            <canvas id="image-canvas" hidden></canvas>
+            <div id="scan-empty" class="scan-empty">
+              <div class="scan-frame" aria-hidden="true"><span></span><span></span><span></span><span></span><b>+</b></div>
+              <p>Your scan will show up here</p>
+            </div>
+            <div id="scan-status" class="scan-status" role="status" aria-live="polite">Ready to scan</div>
+            <div id="scan-result" class="scan-result" hidden>
+              <span class="result-label">FOUND <span id="result-type"></span></span>
+              <p id="result-data"></p>
+              <button id="copy-result" class="copy-button" type="button">Copy result <span aria-hidden="true">□</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="formats-section">
+        <p class="eyebrow">BUILT FOR THE EVERYDAY</p>
+        <div class="formats-grid">
+          <article><span class="format-icon icon-qr" aria-hidden="true">▦</span><h3>QR codes</h3><p>Byte-mode QR, error correction level M, versions 1 to 10.</p></article>
+          <article><span class="format-icon icon-128" aria-hidden="true">128</span><h3>Code 128</h3><p>Compact, versatile encoding for printable ASCII.</p></article>
+          <article><span class="format-icon icon-39" aria-hidden="true">39</span><h3>Code 39</h3><p>Reliable uppercase letters, digits, and a few symbols.</p></article>
+          <article><span class="format-icon icon-ean" aria-hidden="true">EAN</span><h3>EAN-13</h3><p>Retail-ready 13-digit codes, with the check digit handled.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="wordmark" href="#top"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>symbology<span class="wordmark-dot">.</span></span></a>
+      <p>Built with Rust. Shared with care. <a href="https://github.com/journey-to-code-org/symbology">Explore the source ↗</a></p>
+      <span class="footer-license">MIT LICENSE</span>
+    </footer>
+  </body>
+</html>
