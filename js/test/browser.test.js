@@ -13,6 +13,7 @@ const chrome = [process.env.CHROME, '/usr/bin/google-chrome', '/usr/bin/chromium
 const loader = readFileSync(fileURLToPath(new URL('../qr.js', import.meta.url)));
 const wasm = readFileSync(wasmPath);
 const siteFile = (name) => readFileSync(fileURLToPath(new URL(`../../site/${name}`, import.meta.url)));
+const zubraElement = readFileSync(fileURLToPath(new URL('../dist/symbology-code.js', import.meta.url)));
 let browser, server, base;
 
 before(async () => {
@@ -22,6 +23,7 @@ before(async () => {
     if (path === '/') return res.writeHead(200, { 'content-type': 'text/html' }).end(siteFile('index.html'));
     if (path === '/app.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(siteFile('app.js'));
     if (path === '/styles.css') return res.writeHead(200, { 'content-type': 'text/css' }).end(siteFile('styles.css'));
+    if (path === '/dist/symbology-code.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(zubraElement);
     if (path === '/assets/qr.js' || path === '/qr.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(loader);
     if (path === '/assets/symbology.wasm' || path === '/symbology.wasm') return res.writeHead(200, { 'content-type': 'application/wasm' }).end(wasm);
     res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>qr</title>');
@@ -129,4 +131,40 @@ test('static demo generates codes and scans an uploaded image', { skip: !chrome 
   await page.waitForFunction(() => !document.querySelector('#scan-result')?.hidden);
   assert.equal(await page.locator('#result-type').textContent(), 'QR');
   assert.equal(await page.locator('#result-data').textContent(), 'symbology demo scan');
+});
+
+test('Zubra element loads the packaged WASM and generates a QR code', { skip: !chrome && 'no Chrome' }, async () => {
+  const page = await browser.newPage();
+  await page.goto(base);
+  await page.evaluate(async () => {
+    await import('/dist/symbology-code.js');
+    const element = document.createElement('symbology-code');
+    element.setAttribute('value', 'widget integration test');
+    document.body.append(element);
+  });
+  const element = page.locator('symbology-code');
+  await element.locator('svg:not([hidden])').waitFor();
+  assert.equal(await element.locator('select').inputValue(), 'qr');
+
+  const decoded = await page.evaluate(async () => {
+    const element = document.querySelector('symbology-code');
+    const image = new Image();
+    const markup = new XMLSerializer().serializeToString(element.querySelector('svg'));
+    image.src = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml' }));
+    await image.decode();
+    const canvas = Object.assign(document.createElement('canvas'), { width: 360, height: 360 });
+    const context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    const luma = new Uint8Array(canvas.width * canvas.height);
+    for (let i = 0; i < luma.length; i++) luma[i] = (data[i * 4] * 299 + data[i * 4 + 1] * 587 + data[i * 4 + 2] * 114) / 1000;
+    const { loadQr } = await import('/qr.js');
+    return (await loadQr()).decodeText({ width: canvas.width, height: canvas.height, luma });
+  });
+  assert.equal(decoded, 'widget integration test');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    element.getByRole('link', { name: 'Download SVG' }).click(),
+  ]);
+  assert.equal(download.suggestedFilename(), 'symbology-qr.svg');
 });

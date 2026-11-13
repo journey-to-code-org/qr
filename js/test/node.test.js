@@ -125,6 +125,9 @@ test('unified scanning distinguishes QR and linear payloads', () => {
 });
 
 test('loads from a file URL, a Module, and refuses something else', async () => {
+  const bundled = await loadQr();
+  assert.deepEqual(bundled.encode('bundled wasm'), qr.encode('bundled wasm'));
+
   const fromUrl = await loadQr(pathToFileURL(wasmPath));
   assert.deepEqual(fromUrl.encode('a'), qr.encode('a'));
   const fromModule = await loadQr(await WebAssembly.compile(readFileSync(wasmPath)));

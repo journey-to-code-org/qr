@@ -34,12 +34,14 @@ let bytes = decode(&Frame { width, height, luma })?;  // luma: one byte per pixe
 
 ### From JavaScript (a server or a browser)
 
-`js/qr.js` loads the WebAssembly build (`cargo build --release --target wasm32-unknown-unknown`, then `target/wasm32-unknown-unknown/release/symbology.wasm`), the same on Node and in a browser:
+Install the JavaScript package with `npm install @journey-to-code/symbology`.
+Its build includes the WebAssembly module, so `loadQr()` works without a
+separately supplied WASM URL:
 
 ```js
-import { loadQr } from './qr.js';
+import { loadQr } from '@journey-to-code/symbology';
 
-const qr = await loadQr(await fetch('/symbology.wasm'));  // or the bytes, a WebAssembly.Module, or a URL
+const qr = await loadQr(); // Or pass WASM bytes, a Response, Module, or URL.
 const code = qr.encode('https://potomac.solutions/t/8F3K'); // { size, modules }
 const markup = qr.svg(code, { title: 'Your ticket' });     // one <path>, a 4-module quiet zone
 const text = qr.decodeText({ width, height, luma });        // from a camera frame
@@ -49,6 +51,23 @@ const barsSvg = qr.barcodeSvg(bars, { title: 'Ticket' });
 const decoded = qr.decodeBarcodeScanline(lumaRow);          // { type, data }
 const detected = qr.scanFrame({ width, height, luma });     // QR or linear code
 ```
+
+The package also ships a Zubra-built custom element. Import it once, then use
+`<symbology-code>` in HTML:
+
+```js
+import '@journey-to-code/symbology/symbology-code';
+```
+
+```html
+<symbology-code format="qr" value="https://example.com"></symbology-code>
+```
+
+The widget lets a visitor generate QR, Code 128, Code 39, and EAN-13 symbols
+and download them as SVG. Zubra is only a development dependency; consuming
+the compiled element does not install Zubra or its runtime. Build or pack the
+JavaScript package with `npm --prefix js run build` (Rust and the
+`wasm32-unknown-unknown` target are required).
 
 Errors are `QrError`, with `code` one of `empty`, `too-long`, `not-found`, `unsupported`, `uncorrectable`, `malformed`, `bad-frame`, `frame-too-large`. Underneath is `src/exports.rs`, a small C ABI (`qr_alloc`, `qr_encode`, `qr_decode`, `qr_barcode_encode`, `qr_barcode_scanline`, `qr_scan`, `qr_result_ptr`/`qr_result_len`, `qr_free`) any WebAssembly host can call.
 Linear-code input errors are `BarcodeError` values: `empty`, `invalid-input`,
@@ -105,10 +124,10 @@ match result {
 cargo test                          # round trips, every version and mask, perspective, damage, fuzzing
 cargo test --no-default-features    # the encoder alone
 cargo test --release -- --ignored   # the long fuzz run
-cd js && npm test                   # the WebAssembly build in Node and in Chrome (needs the release .wasm)
+cd js && npm run build && npm test  # builds WASM and the Zubra element, then tests Node and Chrome
 ```
 
-`js/test/fixtures.txt` holds 24 codes drawn by the native encoder, every version 1 to 10. The JavaScript tests require the WebAssembly build to draw them exactly, in Node and in Chrome, and read back an SVG painted on a canvas. `cargo test` fails if the native encoder ever draws differently; `UPDATE_FIXTURES=1 cargo test` rewrites the file.
+`js/test/fixtures.txt` holds 24 codes drawn by the native encoder, every version 1 to 10. The JavaScript tests require the WebAssembly build to draw them exactly, in Node and in Chrome, read back an SVG painted on a canvas, and exercise the Zubra custom element. `cargo test` fails if the native encoder ever draws differently; `UPDATE_FIXTURES=1 cargo test` rewrites the file.
 
 CI runs formatting, clippy, both test configurations, both WebAssembly builds, and the JavaScript tests between them; it keeps `symbology.wasm` as an artifact.
 
@@ -134,8 +153,6 @@ Open `http://localhost:8000/site/`. GitHub Pages deployment is handled by
 
 ## Not here yet
 
-- A `qr-code` custom element for Zubra UI.
-- A package on npm for the loader and the build.
 - Other modes, levels and versions above 10.
 
 ## Licence
