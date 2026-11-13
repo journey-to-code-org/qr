@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const here = (path) => fileURLToPath(new URL(path, import.meta.url));
 
-/** `$QR_WASM`, or the release build `cargo build --release --target wasm32-unknown-unknown` makes. */
-export const wasmPath = process.env.QR_WASM ?? here('../../target/wasm32-unknown-unknown/release/qr.wasm');
-if (!existsSync(wasmPath)) throw new Error(`No WebAssembly build at ${wasmPath}. Run cargo build --release --target wasm32-unknown-unknown, or set QR_WASM.`);
+/** `$SYMBOLOGY_WASM`, or the release build `cargo build --release --target wasm32-unknown-unknown` makes. */
+export const wasmPath = process.env.SYMBOLOGY_WASM ?? here('../../target/wasm32-unknown-unknown/release/symbology.wasm');
+if (!existsSync(wasmPath)) throw new Error(`No WebAssembly build at ${wasmPath}. Run cargo build --release --target wasm32-unknown-unknown, or set SYMBOLOGY_WASM.`);
 
 const fromHex = (hex) => Uint8Array.from(hex.match(/../g) ?? [], (pair) => parseInt(pair, 16));
 

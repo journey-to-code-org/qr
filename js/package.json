@@ -1,8 +1,8 @@
 {
-  "name": "@journey-to-code/qr",
+  "name": "@journey-to-code/symbology",
   "version": "0.1.0",
   "private": true,
-  "description": "The qr crate's WebAssembly build, loaded the same on a server and in a browser",
+  "description": "Dependency-free QR and linear barcode encoding and decoding in Rust, with a JavaScript WebAssembly loader",
   "type": "module",
   "license": "MIT",
   "exports": {

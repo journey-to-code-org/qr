@@ -1,12 +1,11 @@
 [package]
-name = "qr"
+name = "symbology"
 version = "0.1.0"
 edition = "2021"
 description = "QR codes and linear barcodes written from scratch, with no dependencies"
 license = "MIT"
-repository = "https://github.com/journey-to-code-org/qr"
-# The crate name is a placeholder until one is chosen and checked against crates.io.
-publish = false
+repository = "https://github.com/journey-to-code-org/symbology"
+publish = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]

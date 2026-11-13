@@ -4,7 +4,7 @@
 //! frames, scratch reuse, and panic-safety fuzzing.
 //!
 //! The long fuzz run is `#[ignore]`d; run it with
-//! `cargo test --release qr::coverage -- --ignored`.
+//! `cargo test --release symbology::coverage -- --ignored`.
 
 use super::tests::{code_from, render, warp};
 use super::{
@@ -672,7 +672,7 @@ fn long_fuzz_run() {
 }
 
 /// Timing for the decoder on this machine, for the performance budget in
-/// issue #95. Run it in release: `cargo test --release qr::coverage::bench
+/// issue #95. Run it in release: `cargo test --release symbology::coverage::bench
 /// -- --ignored --nocapture`. The WASM figure comes from scripts/qr-performance.mjs.
 #[test]
 #[ignore]
