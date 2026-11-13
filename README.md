@@ -1,12 +1,12 @@
 # qr
 
-QR codes written from scratch against ISO/IEC 18004, in Rust, with no dependencies. It encodes bytes into a symbol, and decodes a symbol out of a camera frame.
+QR codes and linear barcodes written from scratch, in Rust, with no dependencies. It encodes QR bytes and Code 128, Code 39, and EAN-13 symbols, and decodes QR camera frames or linear barcode scanlines.
 
 The name is a placeholder.
 
 ## Where it came from
 
-The code was written for [Kin](https://github.com/mnichols08/ZTM-Build-Fest/tree/main/projects/kin) (`rust/src/qr/`, copied at commit 272b8fc), which uses it for invitation and sign-in links and allows itself no crates. `encode.rs`, `decode.rs`, `layout.rs`, `rs.rs`, `tables.rs`, `tests.rs` and `coverage.rs` are unchanged from Kin, so the two can be compared file by file. `lib.rs` and `wire.rs` are new here: Kin's error type is gone, and decoding sits behind a feature.
+The QR code was written for [Kin](https://github.com/mnichols08/ZTM-Build-Fest/tree/main/projects/kin) (`rust/src/qr/`, copied at commit 272b8fc), which uses it for invitation and sign-in links and allows itself no crates. `encode.rs`, `decode.rs`, `layout.rs`, `rs.rs`, `tables.rs`, `tests.rs` and `coverage.rs` are unchanged from Kin, so the two can be compared file by file. `lib.rs` and `wire.rs` adapt the QR code here; `barcode.rs` adds the linear barcode formats.
 
 ## What it supports
 
@@ -48,11 +48,48 @@ const text = qr.decodeText({ width, height, luma });        // from a camera fra
 
 Errors are `QrError`, with `code` one of `empty`, `too-long`, `not-found`, `unsupported`, `uncorrectable`, `malformed`, `bad-frame`, `frame-too-large`. Underneath is `src/exports.rs`, a small C ABI (`qr_alloc`, `qr_encode`, `qr_decode`, `qr_result_ptr`/`qr_result_len`, `qr_free`) any WebAssembly host can call.
 
+### Linear barcodes (Rust)
+
+```rust
+use qr::barcode::{decode_scanline, encode_code128, encode_code39, encode_ean13};
+
+let code128 = encode_code128(b"Ticket-42")?; // printable ASCII, Code Set B
+let code39 = encode_code39(b"TICKET-42")?;   // Code 39's uppercase alphabet
+let ean13 = encode_ean13(b"400638133393")?;  // 12 digits; adds the check digit
+let modules = code128.modules();             // one row: 1 dark, 0 light, quiet zones included
+
+// `scanline` is an 8-bit grayscale row through one barcode, dark bars on light.
+let decoded = decode_scanline(scanline)?;
+```
+
+Code 128 accepts printable ASCII in Code Set B. Code 39 accepts `0-9`, `A-Z`,
+and `-. $/+%`; it does not add the optional Mod-43 check character. EAN-13
+accepts 12 digits (computes the check digit) or 13 digits (validates it). The
+scanline decoder reads either direction and is enabled by the default `decode`
+feature.
+
+### Scan a whole frame
+
+When the code type is not known in advance, `scan_frame` tries QR decoding on
+the full image, then probes up to 17 evenly spaced rows for Code 128, Code 39,
+or EAN-13. It returns the first readable result; it does not enumerate every
+symbol in a frame.
+
+```rust
+use qr::{scan_frame, DetectedCode, Frame};
+
+let result = scan_frame(&Frame { width, height, luma })?;
+match result {
+    DetectedCode::Qr(bytes) => { /* QR payload bytes */ }
+    DetectedCode::Linear(barcode) => { /* symbology and text */ }
+}
+```
+
 ## Features
 
 | Feature | Default | What it adds |
 | --- | --- | --- |
-| `decode` | on | Reading a symbol from a frame. Turn it off (`default-features = false`) for a build that only draws codes |
+| `decode` | on | Reading QR symbols from frames, linear barcodes from scanlines, and unified scanning with `scan_frame`. Turn it off (`default-features = false`) for encoder-only builds |
 
 ## Checking it
 
