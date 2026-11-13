@@ -4,6 +4,8 @@ Notable changes to Symbology are documented here.
 
 ## Unreleased
 
+## 0.2.0 - 2026-11-13
+
 ### Added
 
 - Dependency-free Rust encoders and decoders for Code 128, Code 39, and
