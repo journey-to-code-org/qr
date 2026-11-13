@@ -1,6 +1,6 @@
 {
   "name": "@journey-to-code/symbology",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Dependency-free QR and linear barcode encoding and decoding in Rust, JavaScript, and a Zubra web component",
   "type": "module",
   "license": "MIT",
