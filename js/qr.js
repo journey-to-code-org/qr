@@ -52,6 +52,7 @@ async function instantiate(source) {
 
 /** Load the WebAssembly build. Pass its bytes, a fetch Response, a compiled Module, or a URL. */
 export async function loadQr(source) {
+  source ??= new URL('./symbology.wasm', import.meta.url);
   const { exports: wasm } = await instantiate(source);
   for (const name of ['memory', 'qr_alloc', 'qr_free', 'qr_encode', 'qr_result_ptr', 'qr_result_len']) {
     if (!(name in wasm)) throw new TypeError(`loadQr: this isn't the qr build (no ${name})`);

@@ -73,6 +73,6 @@ export interface Qr {
   barcodeSvg(code: LinearCode, options?: BarcodeSvgOptions): string;
 }
 
-export function loadQr(source: BufferSource | Response | WebAssembly.Module | string | URL): Promise<Qr>;
+export function loadQr(source?: BufferSource | Response | WebAssembly.Module | string | URL): Promise<Qr>;
 export function svg(code: Code, options?: SvgOptions): string;
 export function barcodeSvg(code: LinearCode, options?: BarcodeSvgOptions): string;
