@@ -1,9 +1,10 @@
-//! QR codes written from scratch (ISO/IEC 18004), with no crates.
+//! QR codes and linear barcodes written from scratch, with no crates.
 //!
-//! Two halves: [`encode`] turns bytes into a symbol to draw, and `decode`
-//! (behind the `decode` feature, on by default) reads a camera frame back
-//! into the bytes. Both support byte mode, level M and versions 1–10, which
-//! holds 213 bytes. That covers a link or a signed ticket with room to spare.
+//! [`encode()`] turns bytes into a QR symbol, and `decode` (behind the `decode`
+//! feature, on by default) reads a camera frame back into the bytes. QR
+//! support is byte mode, level M and versions 1–10, which holds 213 bytes.
+//! [`barcode`] provides Code 128, Code 39, and EAN-13 encoding and scanline
+//! decoding.
 //!
 //! [`wire`] holds the byte layouts for callers on the other side of a
 //! WebAssembly or C boundary, and [`exports`] the functions they call.
@@ -11,18 +12,23 @@
 // Without the decoder, the tables and layout helpers only it uses are unused.
 #![cfg_attr(not(feature = "decode"), allow(dead_code))]
 
+pub mod barcode;
 #[cfg(feature = "decode")]
 pub mod decode;
 pub mod encode;
 pub mod exports;
 pub mod layout;
 pub mod rs;
+#[cfg(feature = "decode")]
+pub mod scan;
 pub mod tables;
 pub mod wire;
 
 #[cfg(feature = "decode")]
 pub use decode::{decode, Frame};
 pub use encode::{encode, Code, MAX_BYTES};
+#[cfg(feature = "decode")]
+pub use scan::{scan_frame, DetectedCode, ScanError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QrError {

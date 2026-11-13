@@ -1,0 +1,129 @@
+<script>
+  import { loadQr } from '../qr.js'
+
+  let api
+  let svgWidth = 0
+  let svgHeight = 0
+  let viewBox = '0 0 0 0'
+  let path = ''
+  let svgMarkup = ''
+  let error = ''
+  let loading = true
+
+  async function initialize() {
+    try {
+      api = await loadQr()
+      loading = false
+      generate()
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : String(cause)
+      loading = false
+    }
+  }
+
+  function generate() {
+    if (!api) return
+    try {
+      const code = format === 'qr' ? api.encode(value) : api.encodeBarcode(format, value)
+      const modules = code.modules
+      path = ''
+      if (format === 'qr') {
+        svgWidth = code.size + 8
+        svgHeight = svgWidth
+        for (let y = 0; y < code.size; y++) {
+          for (let x = 0; x < code.size; x++) {
+            if (!modules[y * code.size + x]) continue
+            let run = 1
+            while (x + run < code.size && modules[y * code.size + x + run]) run++
+            path += `M${x + 4} ${y + 4}h${run}v1h-${run}z`
+            x += run - 1
+          }
+        }
+      } else {
+        svgWidth = code.width
+        svgHeight = 60
+        let x = 0
+        while (x < code.width) {
+          if (!modules[x]) {
+            x++
+            continue
+          }
+          let run = 1
+          while (x + run < code.width && modules[x + run]) run++
+          path += `M${x} 0h${run}v${svgHeight}h-${run}z`
+          x += run
+        }
+      }
+      viewBox = `0 0 ${svgWidth} ${svgHeight}`
+      svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" shape-rendering="crispEdges"><rect width="${svgWidth}" height="${svgHeight}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`
+      error = ''
+    } catch (cause) {
+      path = ''
+      svgMarkup = ''
+      error = cause instanceof Error ? cause.message : String(cause)
+    }
+  }
+
+  function download(event) {
+    event.preventDefault()
+    if (!svgMarkup) return
+    const url = URL.createObjectURL(new Blob([svgMarkup], { type: 'image/svg+xml' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `symbology-${format}.svg`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
+  function setFormat(event) {
+    format = event.currentTarget.value
+    generate()
+  }
+
+  function setValue(event) {
+    value = event.currentTarget.value
+  }
+
+  initialize()
+</script>
+<style>
+  :host { color: #17241f; font: 14px/1.5 system-ui, sans-serif; }
+  form { display: grid; gap: 12px; max-width: 28rem; }
+  label { display: grid; gap: 5px; font-size: 12px; font-weight: 600; }
+  select, textarea, button { box-sizing: border-box; font: inherit; }
+  select, textarea { width: 100%; padding: 9px; border: 1px solid #cbd1c7; border-radius: 4px; background: white; }
+  textarea { min-height: 76px; resize: vertical; }
+  button { padding: 10px 14px; border: 0; border-radius: 4px; background: #c9ef5b; color: #17241f; cursor: pointer; font-weight: 700; }
+  svg { display: block; width: min(100%, 24rem); max-height: 24rem; margin-top: 18px; background: white; }
+  a { display: inline-block; margin-top: 12px; color: #314c15; }
+  p { color: #59645d; }
+</style>
+<symbology-code format="qr" value="https://example.com">
+  <form onsubmit={(event) => { event.preventDefault(); generate() }}>
+    <label>Format
+      <select value={format} onchange={setFormat}>
+        <option value="qr">QR code</option>
+        <option value="code128">Code 128</option>
+        <option value="code39">Code 39</option>
+        <option value="ean13">EAN-13</option>
+      </select>
+    </label>
+    <label>Content
+      <textarea value={value} oninput={setValue}></textarea>
+    </label>
+    <button type="submit">Generate code</button>
+  </form>
+  <p role="status">{loading ? 'Loading the Symbology engine…' : error || 'Ready'}</p>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox={viewBox}
+    role="img"
+    aria-label={`Generated ${format} code`}
+    shape-rendering="crispEdges"
+    hidden={!path}
+  >
+    <rect width={svgWidth} height={svgHeight} fill="#fff"></rect>
+    <path d={path} fill="#000"></path>
+  </svg>
+  <a href="#" onclick={download} hidden={!path}>Download SVG</a>
+</symbology-code>

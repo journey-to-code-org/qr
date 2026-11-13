@@ -1,25 +1,54 @@
 {
-  "name": "@journey-to-code/qr",
+  "name": "@journey-to-code/symbology",
   "version": "0.1.0",
-  "private": true,
-  "description": "The qr crate's WebAssembly build, loaded the same on a server and in a browser",
+  "description": "Dependency-free QR and linear barcode encoding and decoding in Rust, JavaScript, and a Zubra web component",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/journey-to-code-org/symbology.git",
+    "directory": "js"
+  },
+  "keywords": [
+    "qr",
+    "barcode",
+    "symbology",
+    "webassembly",
+    "web-component",
+    "zubra"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
-    ".": "./qr.js"
+    ".": {
+      "types": "./qr.d.ts",
+      "import": "./qr.js"
+    },
+    "./symbology-code": {
+      "types": "./dist/symbology-code.d.ts",
+      "import": "./dist/symbology-code.js"
+    },
+    "./symbology.wasm": "./symbology.wasm"
   },
   "types": "./qr.d.ts",
   "files": [
     "qr.js",
-    "qr.d.ts"
+    "qr.d.ts",
+    "symbology.wasm",
+    "dist/",
+    "components/"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "npm run build",
     "test": "node --test --test-concurrency=1 'test/*.test.js'"
   },
   "devDependencies": {
+    "@zubra/compiler": "5.9.2",
     "playwright-core": "^1.65.0"
   }
 }
