@@ -19,12 +19,16 @@ pub mod encode;
 pub mod exports;
 pub mod layout;
 pub mod rs;
+#[cfg(feature = "decode")]
+pub mod scan;
 pub mod tables;
 pub mod wire;
 
 #[cfg(feature = "decode")]
 pub use decode::{decode, Frame};
 pub use encode::{encode, Code, MAX_BYTES};
+#[cfg(feature = "decode")]
+pub use scan::{scan_frame, DetectedCode, ScanError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QrError {
